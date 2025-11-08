@@ -47,24 +47,42 @@ export default function DrawingBoard() {
     setIsModalOpen(true);
   };
 
-  const handleMouseDown = (e) => {
-    setIsDrawing(true);
-    setLastX(e.nativeEvent.offsetX);
-    setLastY(e.nativeEvent.offsetY);
+  const getCanvasCoordinates = (event) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return { x: 0, y: 0 };
+    const rect = canvas.getBoundingClientRect();
+    return {
+      x: event.clientX - rect.left,
+      y: event.clientY - rect.top,
+    };
   };
 
-  const handleMouseMove = (e) => {
-    if (!isDrawing) return;
+  const handlePointerDown = (e) => {
+    if (!canvasRef.current) return;
+    e.preventDefault();
+    const { x, y } = getCanvasCoordinates(e);
+    canvasRef.current?.setPointerCapture?.(e.pointerId);
+    setIsDrawing(true);
+    setLastX(x);
+    setLastY(y);
+  };
+
+  const handlePointerMove = (e) => {
+    if (!isDrawing || !context) return;
+    e.preventDefault();
+    const { x, y } = getCanvasCoordinates(e);
     context.beginPath();
     context.moveTo(lastX, lastY);
-    context.lineTo(e.nativeEvent.offsetX, e.nativeEvent.offsetY);
+    context.lineTo(x, y);
     context.stroke();
 
-    setLastX(e.nativeEvent.offsetX);
-    setLastY(e.nativeEvent.offsetY);
+    setLastX(x);
+    setLastY(y);
   };
 
-  const handleMouseUp = () => {
+  const handlePointerUp = (e) => {
+    e.preventDefault();
+    canvasRef.current?.releasePointerCapture?.(e.pointerId);
     setIsDrawing(false);
   };
 
@@ -89,15 +107,16 @@ export default function DrawingBoard() {
     <div className="flex flex-col items-center mt-6">
       <canvas
         ref={canvasRef}
-        onMouseMove={handleMouseMove}
-        onMouseDown={handleMouseDown}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
+        onPointerMove={handlePointerMove}
+        onPointerDown={handlePointerDown}
+        onPointerUp={handlePointerUp}
+        onPointerLeave={handlePointerUp}
         style={{
           border: "1px solid black",
           margin: "auto",
           borderRadius: "10px",
           cursor: "crosshair",
+          touchAction: "none",
         }}
       />
       <Toolkit
